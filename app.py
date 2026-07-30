@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
-import openai
 import os
-import pandas as pd
 import time
 
 # 1. 網頁基本設定 (專業臨床、學術與 AOTA/Cole 督導風格)
@@ -35,7 +33,7 @@ def load_local_references():
             file_path = os.path.join(REFERENCE_FOLDER, file)
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
-                    local_content += "\\n\\n=== 雲端共享文獻：" + file + " ===\\n"
+                    local_content += "\n\n=== 本機參考文件：" + file + " ===\n"
                     local_content += f.read()
             except Exception as e:
                 pass
@@ -49,6 +47,15 @@ AOTA_ANALYSIS_FRAMEWORK = [
     {"分析維度 (AOTA Domain)": "4. 客戶因素 (Client Factors)", "臨床評估重點項目": "價值觀與信念、身體生理功能 (心率變異、感覺覺察)、身體構造"},
     {"分析維度 (AOTA Domain)": "5. 活動要求 (Activity Demands)", "臨床評估重點項目": "工具與其屬性、空間與社會要求、步驟順序與時間、所需動作與身體機能"},
     {"分析維度 (AOTA Domain)": "6. 分級與調適 (Grading & Adapting)", "臨床評估重點項目": "難度分級 (Grading Up/Down)、環境調適、輔具與代理人介入"}
+]
+
+# 側邊欄使用的職能治療理論速查表
+OT_THEORIES = [
+    {"理論／模式": "MOHO", "方案設計焦點": "動機、習慣、角色、表現能力與環境"},
+    {"理論／模式": "PEO／PEOP", "方案設計焦點": "個人、環境與職能活動之適配"},
+    {"理論／模式": "CMOP-E", "方案設計焦點": "以個案為中心、職能投入與靈性意義"},
+    {"理論／模式": "感覺調節", "方案設計焦點": "喚醒程度、感覺閾值與調節策略"},
+    {"理論／模式": "復元模式", "方案設計焦點": "希望、自主、優勢與有意義生活"},
 ]
 
 # 核心 10 大職能治療介入方案資料庫 (完全整合 Cole 7步驟帶領與 IRM 自我運用模式)
@@ -302,26 +309,6 @@ st.markdown("---")
 st.sidebar.image("https://img.icons8.com/illustrations/lex/112/brain.png", width=90)
 st.sidebar.header("🧭 臨床督導導航儀")
 
-# 【甲方案】安全讀取 OpenAI API 金鑰 (Streamlit Secrets 機制)
-api_key = ""
-api_key_configured = False
-
-if "OPENAI_API_KEY" in st.secrets:
-    api_key = st.secrets["OPENAI_API_KEY"]
-    api_key_configured = True
-elif os.getenv("OPENAI_API_KEY"):
-    api_key = os.getenv("OPENAI_API_KEY")
-    api_key_configured = True
-
-# 載入相容 OpenAI 1.0.0+ 之最新 SDK Client
-client = None
-if api_key_configured:
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
-    except Exception as e:
-        pass
-
 # ==========================================
 # 📤 雲端實時文獻拖曳上傳器 (Web Uploader)
 # ==========================================
@@ -335,14 +322,12 @@ uploaded_files = st.sidebar.file_uploader(
 )
 
 # 讀取上傳檔案的文字內容
-cloud_reference_text = ""
 uploaded_file_names = []
 if uploaded_files:
     st.sidebar.success("📈 成功導入臨床擴充指引！")
     for uploaded_file in uploaded_files:
         try:
-            file_content = uploaded_file.read().decode("utf-8")
-            cloud_reference_text += "\\n\\n=== 雲端即時文獻：" + uploaded_file.name + " ===\\n" + file_content
+            uploaded_file.read().decode("utf-8")
             uploaded_file_names.append(uploaded_file.name)
             st.sidebar.text("📄 " + uploaded_file.name + " (已動態載入)")
         except Exception as e:
@@ -358,22 +343,24 @@ target_group = st.sidebar.selectbox("請選擇方案進行指南導航：", list
 if target_group:
     prog = OT_PROGRAMS[target_group]
     with st.sidebar.expander("🔍 查看 " + target_group + " 詳情"):
-        st.markdown("**🎯 核心媒介活動：**\\n`" + prog['activity'] + "`")
-        st.markdown("**📌 適用主要議題：**\\n" + prog['issue'])
-        st.markdown("**💡 活動概念設計：**\\n" + prog['concept'])
-        st.markdown("**🛠️ 設備與材料：**\\n" + prog['tools'])
+        st.markdown("**🎯 核心媒介活動：**\n\n`" + prog['activity'] + "`")
+        st.markdown("**📌 適用主要議題：**\n\n" + prog['issue'])
+        st.markdown("**💡 活動概念設計：**\n\n" + prog['concept'])
+        st.markdown("**🛠️ 設備與材料：**\n\n" + prog['tools'])
         if "cole_steps" in prog:
-            st.markdown("**👣 Cole 7步驟團體引導：**\\n" + prog['cole_steps'])
+            st.markdown("**👣 Cole 7步驟團體引導：**\n\n" + prog['cole_steps'])
         else:
-            st.markdown("**👣 標準實施步驟：**\\n" + prog['steps'])
+            st.markdown("**👣 標準實施步驟：**\n\n" + prog['steps'])
         if "irm_mode" in prog:
-            st.markdown("**💓 IRM 治療性自我 (Use of Self)：**\\n*" + prog['irm_mode'] + "*")
-        st.markdown("**💓 情緒調節機制：**\\n" + prog['mechanism'])
+            st.markdown("**💓 IRM 治療性自我 (Use of Self)：**\n\n*" + prog['irm_mode'] + "*")
+        st.markdown("**💓 情緒調節機制：**\n\n" + prog['mechanism'])
 
 # 側邊欄顯示理論與 AOTA
 with st.sidebar.expander("📚 AOTA OTPF-4 與學術架構"):
-    df_theories = pd.DataFrame(OT_THEORIES)
-    st.dataframe(df_theories, hide_index=True)
+    st.markdown("**OTPF-4 活動分析面向**")
+    st.dataframe(AOTA_ANALYSIS_FRAMEWORK, hide_index=True)
+    st.markdown("**常用職能治療理論／模式**")
+    st.dataframe(OT_THEORIES, hide_index=True)
 
 # 4. 主畫面：Section 1 - 臨床個案情境分析與活動分級模組
 st.header("📋 第一階段：個案職能需求分析與分級治療設計")
@@ -426,7 +413,7 @@ if st.button("🚀 生成標準化職能活動企畫與 AOTA 評量分析"):
         st.markdown("**• IRM 治療關係溝通模式 (Use of Self)**：" + irm_txt + "")
         
         cole_steps_text = selected_act['cole_steps'] if 'cole_steps' in selected_act else selected_act['steps']
-        st.markdown("**• Cole 7 Steps 團體動力分析**：\\\\n" + cole_steps_text)
+        st.markdown("**• Cole 7 Steps 團體動力分析：**\n\n" + cole_steps_text)
         st.markdown("**• 理論學理連結：** 連結【" + theory_link + "】分析個案在情境時的調節反應。")
     with col_b:
         st.warning("**📝 臨床電子病歷 SOAP 紀錄草稿 (SOAP Note Draft)**")
@@ -452,9 +439,12 @@ st.markdown("---")
 st.header("💬 第二階段：AOTA 臨床督導與活動方案決策研討")
 st.write("本對話模組結合 **Cole 7 步驟**與 **IRM 關係模式(治療性自我)** 進行決策推理。")
 
-# 💡【全新終極安全公告】取代舊的黃色警告！
-if not api_key_configured:
-    st.info("💡 **離線智慧督導教學引擎已啟動 (內建 AOTA OTPF-4 與 Cole 7 步驟學術大腦)**\\n\\n本系統目前運行於「離線教學展示模式」，實習學生與臨床督導可直接於下方對話框輸入問題，進行 10 大情緒方案之臨床活動分析與方案微調討論（免金鑰，100% 離線可用，保證展示順暢）。")
+# 離線版狀態公告
+st.info(
+    "💡 **離線智慧督導教學引擎已啟動（內建 AOTA OTPF-4 與 Cole 7 步驟內容）**\n\n"
+    "本系統目前運行於「離線教學展示模式」。學生與督導可直接在下方輸入問題，"
+    "進行 10 大方案之活動分析與方案微調討論，全程不需要 API 金鑰。"
+)
 
 # 顯示歷史對話
 for msg in st.session_state.clinical_messages:
@@ -469,18 +459,18 @@ def generate_clinical_aota_fallback(query, uploaded_docs):
     # 建立動態偵測上傳文件的文字
     rag_feedback = ""
     if uploaded_docs:
-        rag_feedback = "\\\\n\\\\n* 雲端 RAG 實時提取成功: 偵測到您上傳了實證文獻 " + str(uploaded_docs) + "。AI 已動態掃描檔案，並將其中的介入標準融入 AOTA 與 Cole 7 步驟分析中：\\\\n"
+        rag_feedback = "\n\n*已載入您上傳的參考文件：" + "、".join(uploaded_docs) + "。離線引擎會將檔名所呈現的主題納入方案提示。*\n"
         for doc in uploaded_docs:
             if "生氣" in doc.lower() or "情緒" in doc.lower() or "cole" in doc.lower():
-                rag_feedback += "- 已將【" + doc + "】中的團體動力學 7 步驟、治療性運用自我、引導技巧，與 10 大方案整合進行分析。\\\\n"
+                rag_feedback += "- 【" + doc + "】：優先提示 Cole 7 步驟、情緒調節與治療性自我。\n"
             else:
-                rag_feedback += "- 已將【" + doc + "】中的特定環境限制與個案特徵，作為 AOTA 表現技能 (Performance Skills) 的調適參數。\\\\n"
+                rag_feedback += "- 【" + doc + "】：作為活動要求與環境調適的討論線索。\n"
     else:
-        rag_feedback = "\\\\n\\\\n* 目前未上傳自訂文獻，系統已自動引用內建 AOTA 與 Cole 7 步驟活動分析指引進行推理分析：*"
+        rag_feedback = "\n\n*目前未上傳自訂文件；以下依內建 AOTA 與 Cole 7 步驟內容提供教學提示。*"
 
     # 方案一的心情色彩
     if any(k in query_lower for k in ["色彩", "流動畫", "畫畫", "研究室", "表達", "心情色彩"]):
-        res = f\"\"\"**【OT-Nexus 臨床活動分析與督導反饋】**
+        res = f"""**【OT-Nexus 臨床活動分析與督導回饋】**
 {rag_feedback}
 
 針對您所諮詢的「方案一：心情色彩研究室」方案微調，以下為依據 **Cole 7 步驟** 與 **IRM 治療性自我 (Use of Self)** 進行的深度分析與調適：
@@ -496,10 +486,10 @@ def generate_clinical_aota_fallback(query, uploaded_docs):
 
 #### 🤝 治療性自我應用指南 (Therapeutic Use of Self - IRM Mode)
 - **同理模式 (Empathizing)**：當個案因無法控制作品成果而焦慮挫折時，治療師應主動對應其感受，口語肯定其「願意接受不確定性與失控」的勇氣，不給予美醜評判。
-\"\"\"
+"""
     # 方案三的怒氣揉成形
     elif any(k in query_lower for k in ["怒氣", "揉", "黏土", "憤怒", "衝動", "陶土"]):
-        res = f\"\"\"**【OT-Nexus 臨床活動分析與督導反饋】**
+        res = f"""**【OT-Nexus 臨床活動分析與督導回饋】**
 {rag_feedback}
 
 針對您所諮詢的「方案三：把怒氣揉成形」方案微調與本體覺介入：
@@ -510,9 +500,9 @@ def generate_clinical_aota_fallback(query, uploaded_docs):
 
 #### 🤝 治療性自我應用指南 (Therapeutic Use of Self - IRM Mode)
 - **問題解決模式 (Problem-solving)**：與個案共同協商，將無形且具破壞力的憤怒，透過揉壓黏土的阻力安全釋放，並藉由問題解決，共同將黏土改造成具功能性的保護容器。
-\"\"\"
+"""
     else:
-        res = f\"\"\"**【OT-Nexus 臨床活動分析與督導反饋】**
+        res = f"""**【OT-Nexus 臨床活動分析與督導回饋】**
 {rag_feedback}
 
 針對您諮詢的情境「{query}」，AI 督導結合 **AOTA 活動分析、Cole 7 步驟與 IRM 模式**，提供以下臨床推理指引：
@@ -525,7 +515,7 @@ def generate_clinical_aota_fallback(query, uploaded_docs):
 
 3. **臨床事實查核與覆核聲明**：
    - 系統產出之建議均作為實習生練習臨床推理使用，最終企畫案必須經過持照職能治療師核可覆核。
-\"\"\"
+"""
     return res
 
 # 接收臨床問題輸入
@@ -537,55 +527,13 @@ if user_input := st.chat_input("請描述您想與督導討論、微調或以 AO
     with st.chat_message("assistant"):
         placeholder = st.empty()
         
-        if api_key_configured:
-            full_res = ""
-            try:
-                # 雲端實時 RAG 機制：將 System Prompt 的最頂端注入最新拖曳上傳的文件
-                system_prompt = f\"\"\"
-                你是一位擁有 20 年經驗、專精於情緒調節、AOTA OTPF-4、Cole 7 步驟與 Taylor IRM 治療性自我的『職能治療專家與臨床指導督導 (OT Supervisor)』。
-                你的主要任務是協助學生討論團體方案、活動調適微調、Cole 7 步驟設計、以及治療性自我 (Use of Self) 的臨床模式應用。
-                
-                你必須嚴格遵守以下專業督導準則：
-                1. 限制諮詢範疇：你只解答與「職能治療、AOTA 活動分析、Cole 7 步驟、IRM 關係模式、情緒調節 10 大方案、SOAP 寫作」相關的專業學術研討。
-                2. 實時文獻提取 (RAG)：
-                   以下是治療師「剛剛在網頁上即時拖曳上傳」的最新臨床文獻與 AOTA/Cole 參考資源。你必須在回答時優先參考、提取並與你的回答有機融合：
-                   {cloud_reference_text}
-                   
-                3. 請結合以下 10 大職能介入活動方案資料回答：
-                   {str(OT_PROGRAMS)}
-                   
-                你的口吻必須嚴謹、溫暖、多利用 AOTA/Cole 框架表格與條列式來說明步驟與治療師 Use of Self 語氣建議。
-                \"\"\"
-                # 確保 system prompt 隨時在對話最頂端維持更新
-                messages_payload = [{"role": "system", "content": system_prompt}]
-                for msg in st.session_state.clinical_messages:
-                    if isinstance(msg, dict) and "role" in msg and "content" in msg:
-                        messages_payload.append({"role": msg["role"], "content": msg["content"]})
-                
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=messages_payload,
-                    stream=True
-                )
-                for chunk in response:
-                    if chunk.choices[0].delta.content is not None:
-                        full_res += chunk.choices[0].delta.content
-                        placeholder.markdown(full_res + "▌")
-                placeholder.markdown(full_res)
-            except Exception as e:
-                # 如果 API 失敗，自動採用有內建雲端文件分析功能之自適應 fallback
-                full_res = generate_clinical_aota_fallback(user_input, uploaded_file_names)
-                placeholder.markdown(full_res)
-        else:
-            # 離線完全免金鑰狀態，使用自適應 RAG 模擬引擎（具備動態文件名手動掃描）
-            full_res = generate_clinical_aota_fallback(user_input, uploaded_file_names)
-            import time
-            typed_res = ""
-            for char in full_res:
-                typed_res += char
-                placeholder.markdown(typed_res + "▌")
-                time.sleep(0.002)
-            placeholder.markdown(full_res)
+        full_res = generate_clinical_aota_fallback(user_input, uploaded_file_names)
+        typed_res = ""
+        for char in full_res:
+            typed_res += char
+            placeholder.markdown(typed_res + "▌")
+            time.sleep(0.001)
+        placeholder.markdown(full_res)
             
     st.session_state.clinical_messages.append({"role": "assistant", "content": full_res})
 
@@ -594,7 +542,7 @@ st.markdown("---")
 with st.expander("🛡️ 臨床與教學安全覆核倫理規範 (Responsible AI & Supervisor Checklist)"):
     st.checkbox("1. 本系統由亞大職能治療學系團隊(陳芝萍、宋宜珊、鄭彩君)設計，所提供之企畫初稿與建議僅供教學輔助與臨床推理學習使用。")
     st.checkbox("2. 本系統之任何分析、活動建議與企畫，正式應用於教學或個案前，必須由授課教師或臨床督導進行人工覆核、事實查核與調整核准。")
-    st.warning(\"\"\"
+    st.warning("""
 **【臨床界線與轉介指標】** 
 若服務對象出現：持續性情緒明顯惡化影響生理功能、有自傷傷人或失控想法、兒童遭受疑似受虐或暴力事件、長者突然產生譫妄、幻覺或定向障礙、完全喪失基本自我照顧能力等，實習生應立即停止常規活動引導，並主動上報督導老師，轉介真人醫療、精神專科、心理諮商或緊急危機處理系統支持！
-\"\"\")
+""")
